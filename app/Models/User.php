@@ -62,6 +62,14 @@ class User extends Authenticatable
         ];
     }
 
+    public function hasCompletedProfile(): bool
+    {
+        return $this->weight !== null
+            && $this->height !== null
+            && $this->birth_date !== null
+            && $this->goal !== null;
+    }
+
     public function exercises(): HasMany
     {
         return $this->hasMany(Exercise::class);
