@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserGoal;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +31,10 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'weight' => fake()->randomFloat(2, 55, 120),
+            'height' => fake()->randomFloat(2, 155, 200),
+            'birth_date' => fake()->dateTimeBetween('-55 years', '-18 years')->format('Y-m-d'),
+            'goal' => fake()->randomElement(collect(UserGoal::cases())->map->value->all()),
         ];
     }
 
