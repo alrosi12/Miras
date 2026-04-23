@@ -2,84 +2,73 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\SessionSet\StoreSessionSetRequest;
-use App\Http\Requests\SessionSet\UpdateSessionSetRequest;
+use App\Http\Requests\SessionSetRequest;
 use App\Models\SessionSet;
 use App\Models\WorkoutSession;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class SessionSetController extends Controller
 {
-    public function index(WorkoutSession $workoutSession): View
+    /**
+     * إضافة set للجلسة؛ إن لم يُرسل set_number يُحسب تلقائياً (أعلى رقم + 1 ضمن نفس الجلسة).
+     */
+    public function store(SessionSetRequest $request, WorkoutSession $workoutSession): RedirectResponse
     {
-        $this->authorize('manageSessionSets', $workoutSession);
+        $data = $request->validated();
 
-        $sessionSets = $workoutSession->sessionSets()
-            ->with('exercise')
-            ->orderBy('set_number')
-            ->paginate(30);
+        $setNumber = $data['set_number'] ?? null;
+        if ($setNumber === null) {
+            $setNumber = (int) ($workoutSession->sessionSets()->max('set_number') ?? 0) + 1;
+        }
 
-        return view('session-sets.index', compact('workoutSession', 'sessionSets'));
-    }
-
-    public function create(WorkoutSession $workoutSession): View
-    {
-        $this->authorize('manageSessionSets', $workoutSession);
-
-        return view('session-sets.create', compact('workoutSession'));
-    }
-
-    public function store(StoreSessionSetRequest $request, WorkoutSession $workoutSession): RedirectResponse
-    {
-        $this->authorize('manageSessionSets', $workoutSession);
-
-        $workoutSession->sessionSets()->create($request->validated());
+        $workoutSession->sessionSets()->create([
+            'exercise_id' => $data['exercise_id'],
+            'set_number' => $setNumber,
+            'reps' => $data['reps'] ?? null,
+            'weight' => $data['weight'] ?? null,
+            'is_completed' => (bool) ($data['is_completed'] ?? false),
+        ]);
 
         return redirect()
-            ->route('workout-sessions.session-sets.index', $workoutSession)
+            ->route('workout-sessions.show', $workoutSession)
             ->with('status', __('Set added.'));
     }
 
-    public function show(WorkoutSession $workoutSession, SessionSet $sessionSet): View
+    /**
+     * تحديث reps و weight و is_completed فقط.
+     */
+    public function update(SessionSetRequest $request, WorkoutSession $workoutSession, SessionSet $sessionSet): RedirectResponse|JsonResponse
     {
-        $this->authorize('manageSessionSets', $workoutSession);
-        $this->authorize('view', $sessionSet);
-
-        $sessionSet->load('exercise');
-
-        return view('session-sets.show', compact('workoutSession', 'sessionSet'));
-    }
-
-    public function edit(WorkoutSession $workoutSession, SessionSet $sessionSet): View
-    {
-        $this->authorize('manageSessionSets', $workoutSession);
-        $this->authorize('update', $sessionSet);
-
-        return view('session-sets.edit', compact('workoutSession', 'sessionSet'));
-    }
-
-    public function update(UpdateSessionSetRequest $request, WorkoutSession $workoutSession, SessionSet $sessionSet): RedirectResponse
-    {
-        $this->authorize('manageSessionSets', $workoutSession);
         $this->authorize('update', $sessionSet);
 
         $sessionSet->update($request->validated());
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => __('Set updated.'),
+                'set' => $sessionSet->fresh()->load('exercise:id,name'),
+            ]);
+        }
+
         return redirect()
-            ->route('workout-sessions.session-sets.show', [$workoutSession, $sessionSet])
+            ->route('workout-sessions.show', $workoutSession)
             ->with('status', __('Set updated.'));
     }
 
-    public function destroy(WorkoutSession $workoutSession, SessionSet $sessionSet): RedirectResponse
+    public function destroy(Request $request, WorkoutSession $workoutSession, SessionSet $sessionSet): RedirectResponse|JsonResponse
     {
-        $this->authorize('manageSessionSets', $workoutSession);
         $this->authorize('delete', $sessionSet);
 
         $sessionSet->delete();
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => __('Set removed.')]);
+        }
+
         return redirect()
-            ->route('workout-sessions.session-sets.index', $workoutSession)
+            ->route('workout-sessions.show', $workoutSession)
             ->with('status', __('Set removed.'));
     }
 }

@@ -14,6 +14,14 @@
             <div><dt class="text-slate-500">{{ __('Plans') }}</dt><dd class="font-semibold">{{ $user->workout_plans_count }}</dd></div>
             <div><dt class="text-slate-500">{{ __('Sessions') }}</dt><dd class="font-semibold">{{ $user->workout_sessions_count }}</dd></div>
         </dl>
+        @auth
+            @if ($canSendFriendRequest ?? false)
+                <form method="POST" action="{{ route('friends.send', $user) }}" class="mt-8">
+                    @csrf
+                    <button type="submit" class="w-full py-2 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">{{ __('Send friend request') }}</button>
+                </form>
+            @endif
+        @endauth
     </div>
 </body>
 </html>

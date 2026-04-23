@@ -12,9 +12,13 @@ class ExercisePolicy
         return true;
     }
 
+    /**
+     * عرض التمرين: عام (is_public) أو مملوك للمستخدم الحالي.
+     */
     public function view(User $user, Exercise $exercise): bool
     {
-        return $exercise->user_id === null || $exercise->user_id === $user->id;
+        return (bool) $exercise->is_public
+            || (int) $exercise->user_id === (int) $user->id;
     }
 
     public function create(User $user): bool
@@ -22,11 +26,17 @@ class ExercisePolicy
         return true;
     }
 
+    /**
+     * التعديل: فقط صاحب التمرين (لا يمكن تعديل تمارين النظام user_id = null من هنا).
+     */
     public function update(User $user, Exercise $exercise): bool
     {
-        return $exercise->user_id !== null && $exercise->user_id === $user->id;
+        return $exercise->user_id !== null && (int) $exercise->user_id === (int) $user->id;
     }
 
+    /**
+     * الحذف: نفس شروط التعديل.
+     */
     public function delete(User $user, Exercise $exercise): bool
     {
         return $this->update($user, $exercise);

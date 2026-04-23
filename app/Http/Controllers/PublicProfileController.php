@@ -13,6 +13,10 @@ class PublicProfileController extends Controller
 
         $user->loadCount(['workoutPlans', 'workoutSessions']);
 
-        return view('profiles.show', compact('user'));
+        $canSendFriendRequest = auth()->check()
+            && auth()->id() !== $user->id
+            && auth()->user()->can('sendFriendRequest', $user);
+
+        return view('profiles.show', compact('user', 'canSendFriendRequest'));
     }
 }

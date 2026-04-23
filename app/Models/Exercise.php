@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Exercise extends Model
@@ -36,6 +37,22 @@ class Exercise extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** المستخدم صاحب التمرين (نفس علاقة owner). */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * أيام الخطط المرتبطة عبر جدول plan_day_exercises.
+     */
+    public function workoutPlanDays(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkoutPlanDay::class, 'plan_day_exercises')
+            ->withPivot(['sets', 'reps', 'rest_seconds', 'order'])
+            ->withTimestamps();
     }
 
     public function planDayExercises(): HasMany

@@ -7,10 +7,12 @@ use App\Enums\UserGoal;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -33,6 +35,7 @@ class User extends Authenticatable
         'birth_date',
         'goal',
         'avatar',
+        'is_admin',
     ];
 
     /**
@@ -59,6 +62,7 @@ class User extends Authenticatable
             'goal' => UserGoal::class,
             'weight' => 'decimal:2',
             'height' => 'decimal:2',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -86,6 +90,28 @@ class User extends Authenticatable
     }
 
     /**
+     * آخر جلسة تمرين (للعرض على لوحة الأصدقاء مع eager loading).
+     */
+    public function latestWorkoutSession(): HasOne
+    {
+        return $this->hasOne(WorkoutSession::class)->latestOfMany('date');
+    }
+
+    /**
+     * أصدقاء مقبولون (دمج belongsToMany من user_id و friend_id).
+     *
+     * @return EloquentCollection<int, self>
+     */
+    public function getFriendsAttribute(): EloquentCollection
+    {
+        return $this->friendsAcceptedAsRequester()
+            ->get()
+            ->merge($this->friendsAcceptedAsAddressee()->get())
+            ->unique('id')
+            ->values();
+    }
+
+    /**
      * كل المجموعات المسجّلة في الجلسات (عبر جلسات التمرين).
      */
     public function sessionSets(): HasManyThrough
@@ -106,19 +132,31 @@ class User extends Authenticatable
     }
 
     /**
-     * طلبات/صداقات أنا منشئها (user_id = أنا).
+     * طلبات صداقة أرسلتها (أنا user_id).
      */
-    public function friendshipsInitiated(): HasMany
+    public function sentFriendRequests(): HasMany
     {
         return $this->hasMany(Friendship::class, 'user_id');
     }
 
     /**
-     * طلبات موجّهة إليّ (friend_id = أنا).
+     * طلبات صداقة وصلتني (أنا friend_id).
      */
-    public function friendshipsReceived(): HasMany
+    public function receivedFriendRequests(): HasMany
     {
         return $this->hasMany(Friendship::class, 'friend_id');
+    }
+
+    /** @deprecated استخدم sentFriendRequests */
+    public function friendshipsInitiated(): HasMany
+    {
+        return $this->sentFriendRequests();
+    }
+
+    /** @deprecated استخدم receivedFriendRequests */
+    public function friendshipsReceived(): HasMany
+    {
+        return $this->receivedFriendRequests();
     }
 
     /**

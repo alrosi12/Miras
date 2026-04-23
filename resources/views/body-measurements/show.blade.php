@@ -1,8 +1,14 @@
-<x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-slate-800">{{ $bodyMeasurement->date->toFormattedDateString() }}</h2></x-slot>
-    <div class="py-8 max-w-xl mx-auto sm:px-6 lg:px-8 text-sm space-y-2">
-        @if (session('status'))<p class="text-emerald-700">{{ session('status') }}</p>@endif
+@extends('layouts.app')
+
+@section('title', $bodyMeasurement->date->toDateString())
+
+@section('header')
+    <h1 class="text-xl font-semibold text-slate-900">{{ $bodyMeasurement->date->toFormattedDateString() }}</h1>
+@endsection
+
+@section('content')
+    <div class="mx-auto max-w-xl space-y-2 rounded-2xl border border-slate-200/80 bg-white p-6 text-sm shadow-sm">
         <p>{{ __('Weight') }}: {{ $bodyMeasurement->weight ?? '—' }}</p>
-        <a href="{{ route('body-measurements.edit', $bodyMeasurement) }}" class="text-emerald-700 font-semibold">{{ __('Edit') }}</a>
+        <a href="{{ route('body-measurements.edit', $bodyMeasurement) }}" class="font-semibold text-emerald-700 hover:underline">{{ __('Edit') }}</a>
     </div>
-</x-app-layout>
+@endsection

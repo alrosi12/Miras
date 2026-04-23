@@ -35,6 +35,7 @@ class UserFactory extends Factory
             'height' => fake()->randomFloat(2, 155, 200),
             'birth_date' => fake()->dateTimeBetween('-55 years', '-18 years')->format('Y-m-d'),
             'goal' => fake()->randomElement(collect(UserGoal::cases())->map->value->all()),
+            'is_admin' => false,
         ];
     }
 

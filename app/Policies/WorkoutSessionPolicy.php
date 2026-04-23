@@ -14,7 +14,7 @@ class WorkoutSessionPolicy
 
     public function view(User $user, WorkoutSession $workoutSession): bool
     {
-        return $workoutSession->user_id === $user->id;
+        return $workoutSession->user_id === $user->id || $user->is_admin === true;
     }
 
     public function create(User $user): bool
@@ -35,6 +35,12 @@ class WorkoutSessionPolicy
     public function finish(User $user, WorkoutSession $workoutSession): bool
     {
         return $this->update($user, $workoutSession);
+    }
+
+    /** نسخ الجلسة — صاحب الجلسة فقط. */
+    public function duplicate(User $user, WorkoutSession $workoutSession): bool
+    {
+        return $workoutSession->user_id === $user->id;
     }
 
     /**

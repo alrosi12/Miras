@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\WorkoutPlan\StoreWorkoutPlanRequest;
-use App\Http\Requests\WorkoutPlan\UpdateWorkoutPlanRequest;
+use App\Http\Requests\WorkoutPlanRequest;
+use App\Models\Exercise;
 use App\Models\WorkoutPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -12,16 +12,17 @@ use Illuminate\View\View;
 
 class WorkoutPlanController extends Controller
 {
+    /**
+     * قائمة خطط المستخدم الحالي فقط (لا تُعرض خطط الآخرين حتى لو عامة).
+     */
     public function index(): View
     {
         $this->authorize('viewAny', WorkoutPlan::class);
 
         $plans = WorkoutPlan::query()
-            ->where(function ($q) {
-                $q->where('user_id', auth()->id())
-                    ->orWhere('is_public', true);
-            })
+            ->where('user_id', auth()->id())
             ->with('user')
+            ->withCount(['workoutPlanDays', 'planDayExercises'])
             ->latest()
             ->paginate(12);
 
@@ -32,19 +33,50 @@ class WorkoutPlanController extends Controller
     {
         $this->authorize('create', WorkoutPlan::class);
 
-        return view('workout-plans.create');
+        $exercises = Exercise::query()
+            ->visibleTo((int) auth()->id())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $initialDaysPayload = [[
+            'day_name' => '',
+            'order' => 0,
+            'exercises' => [[
+                'exercise_id' => '',
+                'sets' => 3,
+                'reps' => 10,
+                'rest_seconds' => 60,
+                'order' => 0,
+            ]],
+        ]];
+
+        return view('workout-plans.create', compact('exercises', 'initialDaysPayload'));
     }
 
-    public function store(StoreWorkoutPlanRequest $request): RedirectResponse
+    /**
+     * إنشاء الخطة مع الأيام والتمارين داخل معاملة واحدة.
+     */
+    public function store(WorkoutPlanRequest $request): RedirectResponse
     {
-        $this->authorize('create', WorkoutPlan::class);
+        $validated = $request->validated();
+        $days = $validated['days'];
+        unset($validated['days']);
 
-        $plan = WorkoutPlan::query()->create(array_merge(
-            $request->validated(),
-            ['user_id' => $request->user()->id]
-        ));
+        $plan = DB::transaction(function () use ($validated, $days, $request) {
+            $plan = WorkoutPlan::query()->create([
+                'user_id' => $request->user()->id,
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'is_public' => (bool) ($validated['is_public'] ?? false),
+            ]);
+            $this->persistNestedDays($plan, $days);
 
-        return redirect()->route('workout-plans.show', $plan)->with('status', __('Plan created.'));
+            return $plan;
+        });
+
+        return redirect()
+            ->route('workout-plans.show', $plan)
+            ->with('status', __('Plan created.'));
     }
 
     public function show(WorkoutPlan $workoutPlan): View
@@ -60,16 +92,55 @@ class WorkoutPlanController extends Controller
     {
         $this->authorize('update', $workoutPlan);
 
-        return view('workout-plans.edit', compact('workoutPlan'));
+        $workoutPlan->load(['workoutPlanDays.planDayExercises']);
+
+        $exercises = Exercise::query()
+            ->visibleTo((int) auth()->id())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $initialDaysPayload = $workoutPlan->workoutPlanDays->map(function ($day) {
+            return [
+                'day_name' => $day->day_name,
+                'order' => $day->order,
+                'exercises' => $day->planDayExercises->map(fn ($row) => [
+                    'exercise_id' => (string) $row->exercise_id,
+                    'sets' => $row->sets,
+                    'reps' => $row->reps,
+                    'rest_seconds' => $row->rest_seconds,
+                    'order' => $row->order,
+                ])->values()->all(),
+            ];
+        })->values()->all();
+
+        return view('workout-plans.edit', compact('workoutPlan', 'exercises', 'initialDaysPayload'));
     }
 
-    public function update(UpdateWorkoutPlanRequest $request, WorkoutPlan $workoutPlan): RedirectResponse
+    /**
+     * استبدال أيام الخطة وتمارينها بالكامل (حذف القديم ثم إعادة الإدراج) داخل معاملة.
+     */
+    public function update(WorkoutPlanRequest $request, WorkoutPlan $workoutPlan): RedirectResponse
     {
         $this->authorize('update', $workoutPlan);
 
-        $workoutPlan->update($request->validated());
+        $validated = $request->validated();
+        $days = $validated['days'];
+        unset($validated['days']);
 
-        return redirect()->route('workout-plans.show', $workoutPlan)->with('status', __('Plan updated.'));
+        DB::transaction(function () use ($workoutPlan, $validated, $days) {
+            $workoutPlan->update([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'is_public' => (bool) ($validated['is_public'] ?? $workoutPlan->is_public),
+            ]);
+            // cascadeOnDelete على plan_day_exercises عند حذف اليوم
+            $workoutPlan->workoutPlanDays()->delete();
+            $this->persistNestedDays($workoutPlan, $days);
+        });
+
+        return redirect()
+            ->route('workout-plans.show', $workoutPlan)
+            ->with('status', __('Plan updated.'));
     }
 
     public function destroy(WorkoutPlan $workoutPlan): RedirectResponse
@@ -81,6 +152,9 @@ class WorkoutPlanController extends Controller
         return redirect()->route('workout-plans.index')->with('status', __('Plan deleted.'));
     }
 
+    /**
+     * نسخ كامل: الخطة + الأيام + صفوف plan_day_exercises.
+     */
     public function duplicate(WorkoutPlan $workoutPlan): RedirectResponse
     {
         $this->authorize('duplicate', $workoutPlan);
@@ -109,15 +183,20 @@ class WorkoutPlanController extends Controller
             return $newPlan;
         });
 
-        return redirect()->route('workout-plans.show', $clone)->with('status', __('Routine duplicated.'));
+        return redirect()
+            ->route('workout-plans.show', $clone)
+            ->with('status', __('Routine duplicated.'));
     }
 
-    public function enableShare(WorkoutPlan $workoutPlan): RedirectResponse
+    /**
+     * توليد share_token فريد (UUID) لعرض الخطة بدون تسجيل دخول.
+     */
+    public function share(WorkoutPlan $workoutPlan): RedirectResponse
     {
-        $this->authorize('manageShare', $workoutPlan);
+        $this->authorize('share', $workoutPlan);
 
         do {
-            $token = Str::random(40);
+            $token = (string) Str::uuid();
         } while (WorkoutPlan::query()->where('share_token', $token)->exists());
 
         $workoutPlan->forceFill(['share_token' => $token])->save();
@@ -125,25 +204,66 @@ class WorkoutPlanController extends Controller
         return redirect()
             ->route('workout-plans.show', $workoutPlan)
             ->with('status', __('Share link enabled.'))
-            ->with('share_url', route('workout-plans.share', ['token' => $token]));
+            ->with('share_url', route('workout-plans.public', ['share_token' => $token]));
     }
 
-    public function disableShare(WorkoutPlan $workoutPlan): RedirectResponse
+    public function revokeShare(WorkoutPlan $workoutPlan): RedirectResponse
     {
-        $this->authorize('manageShare', $workoutPlan);
+        $this->authorize('share', $workoutPlan);
 
         $workoutPlan->forceFill(['share_token' => null])->save();
 
-        return redirect()->route('workout-plans.show', $workoutPlan)->with('status', __('Share link removed.'));
+        return redirect()
+            ->route('workout-plans.show', $workoutPlan)
+            ->with('status', __('Share link removed.'));
     }
 
-    public function shareShow(string $token): View
+    /**
+     * عرض عام بالرابط — بدون middleware auth.
+     */
+    public function showPublic(string $share_token): View
     {
         $workoutPlan = WorkoutPlan::query()
-            ->byShareToken($token)
+            ->byShareToken($share_token)
             ->with(['user', 'workoutPlanDays.planDayExercises.exercise'])
             ->firstOrFail();
 
-        return view('workout-plans.share', compact('workoutPlan'));
+        return view('workout-plans.public', compact('workoutPlan'));
+    }
+
+    /** تبديل حقل is_public (خاص ↔ عام). */
+    public function togglePublic(WorkoutPlan $workoutPlan): RedirectResponse
+    {
+        $this->authorize('update', $workoutPlan);
+
+        $workoutPlan->update([
+            'is_public' => ! $workoutPlan->is_public,
+        ]);
+
+        return back()->with('status', __('Visibility updated.'));
+    }
+
+    /**
+     * @param  array<int, array{day_name: string, order?: int, exercises: array<int, array<string, mixed>>}>  $days
+     */
+    protected function persistNestedDays(WorkoutPlan $plan, array $days): void
+    {
+        foreach ($days as $dIdx => $dayData) {
+            $exercises = $dayData['exercises'] ?? [];
+            $day = $plan->workoutPlanDays()->create([
+                'day_name' => $dayData['day_name'],
+                'order' => $dayData['order'] ?? $dIdx,
+            ]);
+
+            foreach ($exercises as $eIdx => $ex) {
+                $day->planDayExercises()->create([
+                    'exercise_id' => (int) $ex['exercise_id'],
+                    'sets' => isset($ex['sets']) ? (int) $ex['sets'] : 3,
+                    'reps' => isset($ex['reps']) ? (int) $ex['reps'] : 10,
+                    'rest_seconds' => isset($ex['rest_seconds']) ? (int) $ex['rest_seconds'] : 60,
+                    'order' => $ex['order'] ?? $eIdx,
+                ]);
+            }
+        }
     }
 }

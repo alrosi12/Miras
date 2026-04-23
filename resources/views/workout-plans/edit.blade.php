@@ -1,7 +1,13 @@
-<x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-slate-800">{{ __('Edit plan') }}</h2></x-slot>
-    <div class="py-8 max-w-xl mx-auto sm:px-6 lg:px-8">
-        <p class="text-slate-700 font-medium">{{ $workoutPlan->name }}</p>
-        <a href="{{ route('workout-plans.show', $workoutPlan) }}" class="text-sm text-emerald-700 font-semibold mt-4 inline-block">{{ __('View') }}</a>
+@extends('layouts.app')
+
+@section('title', __('Edit routine'))
+
+@section('header')
+    <h1 class="text-xl font-semibold text-slate-900">{{ __('Edit routine') }}</h1>
+@endsection
+
+@section('content')
+    <div class="mx-auto max-w-3xl">
+        @include('workout-plans._editor-form', ['workoutPlan' => $workoutPlan, 'initialDaysPayload' => $initialDaysPayload, 'exercises' => $exercises])
     </div>
-</x-app-layout>
+@endsection

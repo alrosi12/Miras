@@ -1,0 +1,131 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.thumb { width: 100%; background: #0a0f1e; border-radius: 16px; padding: 36px 40px; display: flex; flex-direction: column; gap: 24px; min-height: 420px; position: relative; overflow: hidden; }
+.bg-circle { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+.header { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 36px; height: 36px; background: #378ADD; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.logo-text { font-size: 22px; font-weight: 500; color: #ffffff; letter-spacing: -0.5px; }
+.logo-sub { font-size: 13px; color: #6b7fa3; margin-top: 2px; }
+.tag { font-size: 11px; padding: 5px 12px; border-radius: 99px; background: rgba(55,138,221,0.15); color: #378ADD; border: 0.5px solid rgba(55,138,221,0.3); }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: relative; z-index: 2; }
+.stat { background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; }
+.stat-label { font-size: 11px; color: #6b7fa3; margin-bottom: 6px; }
+.stat-val { font-size: 22px; font-weight: 500; color: #ffffff; }
+.stat-change { font-size: 11px; color: #5DCAA5; margin-top: 3px; }
+.bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; position: relative; z-index: 2; }
+.card { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 16px; }
+.card-title { font-size: 12px; color: #6b7fa3; margin-bottom: 12px; font-weight: 400; }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 60px; }
+.bar { flex: 1; border-radius: 4px 4px 0 0; background: rgba(55,138,221,0.3); }
+.bar.hi { background: #378ADD; }
+.progress-list { display: flex; flex-direction: column; gap: 8px; }
+.prog-item { display: flex; align-items: center; justify-content: space-between; }
+.prog-name { font-size: 12px; color: #a0aec0; }
+.prog-val { font-size: 13px; font-weight: 500; color: #ffffff; }
+.prog-bar-bg { height: 3px; background: rgba(255,255,255,0.08); border-radius: 99px; margin-top: 4px; }
+.prog-bar-fill { height: 3px; border-radius: 99px; background: #378ADD; }
+.streak-row { display: flex; gap: 5px; margin-top: 4px; }
+.streak-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(55,138,221,0.2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #6b7fa3; }
+.streak-dot.done { background: #378ADD; color: white; }
+.streak-dot.today { background: rgba(55,138,221,0.4); border: 1px solid #378ADD; color: #378ADD; }
+.tech-row { display: flex; gap: 8px; position: relative; z-index: 2; flex-wrap: wrap; }
+.tech-pill { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,0.06); color: #a0aec0; border: 0.5px solid rgba(255,255,255,0.1); }
+</style>
+
+<div class="thumb">
+  <div class="bg-circle" style="width:300px;height:300px;background:rgba(55,138,221,0.08);top:-100px;right:-80px;"></div>
+  <div class="bg-circle" style="width:200px;height:200px;background:rgba(93,202,165,0.06);bottom:-60px;left:-60px;"></div>
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="9" width="4" height="6" rx="1" fill="white"/>
+          <rect x="8" y="5" width="4" height="10" rx="1" fill="white"/>
+          <rect x="14" y="7" width="4" height="8" rx="1" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">FitTrack</div>
+        <div class="logo-sub">منصة متابعة التمارين الرياضية</div>
+      </div>
+    </div>
+    <div class="tag">Laravel 11</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-label">جلسات الأسبوع</div>
+      <div class="stat-val">4</div>
+      <div class="stat-change">↑ +1 عن الأسبوع</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">مجموع الدقائق</div>
+      <div class="stat-val">210</div>
+      <div class="stat-change">↑ +15%</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Streak الحالي</div>
+      <div class="stat-val">12 يوم</div>
+      <div class="stat-change" style="color:#FAC775;">🔥 الأفضل: 21</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">الوزن</div>
+      <div class="stat-val">78 كغ</div>
+      <div class="stat-change">↓ -2 هذا الشهر</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="card">
+      <div class="card-title">الجلسات الأسبوعية</div>
+      <div class="bars">
+        <div class="bar" style="height:35%;"></div>
+        <div class="bar" style="height:55%;"></div>
+        <div class="bar" style="height:75%;"></div>
+        <div class="bar" style="height:45%;"></div>
+        <div class="bar hi" style="height:95%;"></div>
+        <div class="bar" style="height:65%;"></div>
+        <div class="bar" style="height:30%;"></div>
+      </div>
+      <div class="streak-row" style="margin-top:10px;">
+        <div class="streak-dot done">س</div>
+        <div class="streak-dot done">ح</div>
+        <div class="streak-dot done">ن</div>
+        <div class="streak-dot"></div>
+        <div class="streak-dot done">ر</div>
+        <div class="streak-dot today">خ</div>
+        <div class="streak-dot"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">تقدم التمارين</div>
+      <div class="progress-list">
+        <div>
+          <div class="prog-item"><span class="prog-name">Bench Press</span><span class="prog-val">80 كغ <span style="font-size:11px;color:#5DCAA5;">+10</span></span></div>
+          <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:75%;"></div></div>
+        </div>
+        <div>
+          <div class="prog-item"><span class="prog-name">Squat</span><span class="prog-val">100 كغ <span style="font-size:11px;color:#5DCAA5;">+15</span></span></div>
+          <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:85%;background:#5DCAA5;"></div></div>
+        </div>
+        <div>
+          <div class="prog-item"><span class="prog-name">Deadlift</span><span class="prog-val">120 كغ <span style="font-size:11px;color:#5DCAA5;">+20</span></span></div>
+          <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:92%;background:#FAC775;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <span class="tech-pill">Laravel 11</span>
+    <span class="tech-pill">MySQL</span>
+    <span class="tech-pill">Tailwind CSS</span>
+    <span class="tech-pill">Alpine.js</span>
+    <span class="tech-pill">Chart.js</span>
+    <span class="tech-pill">29 صفحة</span>
+    <span class="tech-pill">Admin Panel</span>
+  </div>
+</div>

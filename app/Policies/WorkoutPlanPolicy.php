@@ -15,7 +15,8 @@ class WorkoutPlanPolicy
     public function view(User $user, WorkoutPlan $workoutPlan): bool
     {
         return $workoutPlan->user_id === $user->id
-            || $workoutPlan->is_public === true;
+            || $workoutPlan->is_public === true
+            || $user->is_admin === true;
     }
 
     public function create(User $user): bool
@@ -38,7 +39,8 @@ class WorkoutPlanPolicy
         return $workoutPlan->user_id === $user->id || $workoutPlan->is_public === true;
     }
 
-    public function manageShare(User $user, WorkoutPlan $workoutPlan): bool
+    /** توليد/إلغاء رابط المشاركة — صاحب الخطة فقط. */
+    public function share(User $user, WorkoutPlan $workoutPlan): bool
     {
         return $workoutPlan->user_id === $user->id;
     }
